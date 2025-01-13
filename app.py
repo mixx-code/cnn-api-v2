@@ -21,9 +21,9 @@ app = Flask(__name__)
 # Enable CORS for specified origins
 # CORS(app, origins=["http://localhost:3000", "http://your-frontend-url.com"])
 CORS(app, resources={r"/*": {
-    "origins": "*",  # Mengizinkan semua origin
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
+    "origins": "*"  # Mengizinkan semua origin
+    # "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    # "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
 }})
 
 # Fungsi untuk logging request sebelum diproses

@@ -1,4 +1,5 @@
 from functools import wraps
+import json
 from flask import jsonify, request
 import jwt
 from config.db_connection import create_db_connection
@@ -110,15 +111,13 @@ def get_all_predictions():
         query = """
             SELECT
                 h.prediksi_id,
-                g.petugas_id,
-                g.gambar_hama,
+                h.gambar_id,
                 h.prediction_result,
                 h.prediction_percentage,
+                h.all_probabilities,
                 h.tanggal
             FROM
                 hasil_prediksi h
-            JOIN
-                gambar_hama g ON h.gambar_id = g.gambar_id
         """
         if cursor_id:
             query += " WHERE h.prediksi_id < %s"
@@ -136,21 +135,20 @@ def get_all_predictions():
 
         # Parse the predictions
         for prediction in predictions:
-            if 'gambar_hama' in prediction:
-                image_data = prediction['gambar_hama']
-                image = Image.open(io.BytesIO(image_data))
-                img_format = image.format.lower()
-                buffered = io.BytesIO()
-                image.save(buffered, format=image.format)
-                img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
-                prediction['image_base64'] = f"data:image/{img_format};base64,{img_str}"
+            # Decode all_probabilities JSON if it's a string
+            all_probabilities = prediction.get('all_probabilities', '{}')  # Default to an empty JSON
+            try:
+                all_probabilities = json.loads(all_probabilities) if isinstance(all_probabilities, str) else all_probabilities
+            except json.JSONDecodeError as e:
+                print(f"JSON decode error for all_probabilities: {e}")
+                all_probabilities = {}
 
             prediction_data = {
                 'prediksi_id': prediction.get('prediksi_id'),
-                'petugas_id': prediction.get('petugas_id'),
+                'gambar_id': prediction.get('gambar_id'),
                 'prediction_result': prediction.get('prediction_result', 'Unknown'),
                 'prediction_percentage': prediction.get('prediction_percentage', '0%'),
-                'image_base64': prediction['image_base64'],
+                'all_probabilities': all_probabilities,
                 'tanggal': prediction.get('tanggal')
             }
             all_predictions.append(prediction_data)

@@ -51,8 +51,46 @@ def token_required_admin(f):
     
     return decorated_function
 
+def token_required_admin_or_petugas(f):
+    """Decorator untuk memverifikasi token di header dan mengizinkan akses admin atau petugas."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'success': False, 'message': 'Token is missing.'}), 403
+        
+        try:
+            # Menghapus "Bearer " di depan token
+            token = token.split(" ")[1]
+            # Decode token
+            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            
+            # Mendapatkan id pengguna dan jenis akses (admin atau petugas)
+            is_admin = data.get('is_admin', False)
+            is_petugas = data.get('id', False)
+            
+            # Validasi: pengguna harus admin atau petugas
+            if not (is_admin or is_petugas):
+                return jsonify({
+                    'success': False,
+                    'message': 'Your token does not grant access to this API.'
+                }), 403
+            
+            # Simpan informasi ke dalam request context
+            request.is_admin = is_admin
+            request.is_petugas = is_petugas
 
-@token_required_admin
+        except Exception as e:
+            print(f"Token decoding error: {e}")  # Debugging error
+            return jsonify({'success': False, 'message': 'Invalid or expired token.'}), 403
+        
+        # Lanjutkan ke endpoint
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+
+@token_required_admin_or_petugas
 def get_gambar_hama():
     """Endpoint untuk mendapatkan data gambar dari tabel `gambar` dengan cursor-based pagination."""
     connection = create_db_connection()
